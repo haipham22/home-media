@@ -1,7 +1,16 @@
 version: "3"
 
+
+x-env: &env
+  restart: unless-stopped
+  networks:
+    - default
+  volumes:
+    - ./data/nas:/data
+
 services:
   radarr:
+    <<: *env
     image: lscr.io/linuxserver/radarr
     container_name: radarr
     volumes:
@@ -9,19 +18,17 @@ services:
       - ./data/nas:/data
     ports:
       - 7878:7878
-    restart: unless-stopped
-
   sonarr:
+    <<: *env
     image: lscr.io/linuxserver/sonarr
     container_name: sonarr
     volumes:
       - ./data/sonarr:/config
-      - ./data/nas:/data
     ports:
       - 8989:8989
-    restart: unless-stopped
 
   bazarr:
+    <<: *env
     image: cr.hotio.dev/hotio/bazarr
     container_name: bazarr
     volumes:
@@ -29,21 +36,23 @@ services:
       - ./data/nas:/data
     ports:
       - 6767:6767
-    restart: unless-stopped
 
   overseerr:
+    <<: *env
     image: sctx/overseerr:latest
     container_name: overseerr
+    depends_on:
+      - plex
     environment:
       - LOG_LEVEL=debug
     ports:
       - 5055:5055
     volumes:
       - ./data/overseerr:/app/config
-    restart: unless-stopped
 
   prowlarr:
     container_name: prowlarr
+    <<: *env
     image: cr.hotio.dev/hotio/prowlarr:nightly
     restart: unless-stopped
     ports:
@@ -51,17 +60,9 @@ services:
     volumes:
       - ./data/prowlarr:/config
 
-  # autoscan:
-  #   container_name: autoscan
-  #   image: cloudb0x/autoscan
-  #   restart: unless-stopped
-  #   ports:
-  #     - "3030:3030"
-  #   volumes:
-  #     - ./data/autoscan:/config
-  #     - ./data/nas:/data
   autoscan:
     container_name: autoscan
+    <<: *env
     image: hotio/autoscan
     depends_on:
       - plex
@@ -72,24 +73,23 @@ services:
       - "3030:3030"
     volumes:
       - ./data/autoscan:/config
-  # emby:
-  #   image: dperson/emby
-  #   restart: always
-  #   ports:
-  #     - "8096:8096"
-  #   expose:
-  #     - "7359/udp"
-  #     - "1900/udp"
-  #   volumes:
-  #     - ${USERDIR}/config/emby:/config
-  #     - ${USERDIR}/media/movies:/media/movies
-  #     - ${USERDIR}/media/tv:/media/tv
   plex:
     container_name: plex
+    <<: *env
     image: lscr.io/linuxserver/plex
-    restart: unless-stopped
     ports:
       - 32400:32400
     volumes:
       - ./data/plex/config:/config
-      - ./data/nas:/data
+
+  notifiarr:
+    container_name: notifiarr
+    hostname: notifiarr
+    <<: *env
+    image: golift/notifiarr
+    ports:
+      - "5454:5454"
+    volumes:
+      - ./data/notifiarr:/config
+      - /var/run/utmp:/var/run/utmp
+      # - /etc/machine-id:/etc/machine-id
