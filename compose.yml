@@ -1,95 +1,257 @@
-version: "3"
-
+version: "3.8"
 
 x-env: &env
-  restart: unless-stopped
+  env_file:
+    - .env
   networks:
     - default
-  volumes:
-    - ./data/nas:/data
-
+    # - home_docker
+ 
+# networks:
+#   home_docker:
+#     external: true
+#     name: home_docker
+ 
 services:
   radarr:
     <<: *env
-    image: lscr.io/linuxserver/radarr
     container_name: radarr
+    image: lscr.io/linuxserver/radarr
     volumes:
       - ./data/radarr:/config
       - ./data/nas:/data
     ports:
       - 7878:7878
+ 
+  # radarr_4k:
+    # container_name: radarr_4k
+  #   image: lscr.io/linuxserver/radarr
+  #   networks:
+  #     - home_docker
+  #   environment:
+  #     - DOCKER_MODS=ghcr.io/gilbn/theme.park:radarr
+  #     - TP_ADDON=radarr-4k-logo|radarr-darker
+  #   volumes:
+  #     - ./data/radarr_4k:/config
+  #     - ./data/nas:/data
+  #   ports:
+  #     - 7978:7878
+ 
   sonarr:
     <<: *env
-    image: lscr.io/linuxserver/sonarr
     container_name: sonarr
+    image: lscr.io/linuxserver/sonarr
     volumes:
       - ./data/sonarr:/config
+      - ./data/nas:/data
     ports:
       - 8989:8989
-
+ 
+  # sonarr_4k:
+    # container_name: sonarr_4k
+  #   image: lscr.io/linuxserver/sonarr
+  #   networks:
+  #     - home_docker
+  #   environment:
+  #     - DOCKER_MODS=ghcr.io/gilbn/theme.park:sonarr
+  #     - TP_ADDON=sonarr-4k-logo|sonarr-darker
+  #   volumes:
+  #     - ./data/sonarr_4k:/config
+  #     - ./data/nas:/data
+  #   ports:
+  #     - 9089:8989
+ 
   bazarr:
     <<: *env
-    image: cr.hotio.dev/hotio/bazarr
     container_name: bazarr
+    image: cr.hotio.dev/hotio/bazarr
     volumes:
       - ./data/bazarr:/config
       - ./data/nas:/data
     ports:
       - 6767:6767
-
+ 
+  # bazarr_4k:
+    # container_name: bazarr_4k
+  #   image: cr.hotio.dev/hotio/bazarr
+  #   networks:
+  #     - home_docker
+  #   # environment:
+  #     #- TP_HOTIO=true
+  #     #- TP_THEME=plex
+  #     #- TP_ADDON=bazarr-4k-logo
+  #   volumes:
+  #     #- ./data/bazarr_4k/theme/98-themepark:/etc/cont-init.d/99-themepark
+  #     - ./data/bazarr_4k:/config
+  #     - ./data/nas:/data
+  #   ports:
+  #     - 6867:6767
+ 
   overseerr:
     <<: *env
-    image: sctx/overseerr:latest
     container_name: overseerr
-    depends_on:
-      - plex
+    image: linuxserver/overseerr
     environment:
       - LOG_LEVEL=debug
     ports:
       - 5055:5055
     volumes:
-      - ./data/overseerr:/app/config
-
+      - ./data/overseerr:/config
+ 
   prowlarr:
-    container_name: prowlarr
     <<: *env
+    container_name: prowlarr
     image: cr.hotio.dev/hotio/prowlarr:nightly
-    restart: unless-stopped
     ports:
       - 9696:9696
     volumes:
       - ./data/prowlarr:/config
-
+ 
   autoscan:
-    container_name: autoscan
     <<: *env
+    container_name: autoscan
     image: hotio/autoscan
     depends_on:
       - plex
-      - bazarr
-      - sonarr
-      - radarr
     ports:
       - "3030:3030"
     volumes:
       - ./data/autoscan:/config
-  plex:
-    container_name: plex
+      - ./data/nas:/data
+ 
+  unpackerr:
     <<: *env
+    container_name: unpackerr
+    image: golift/unpackerr
+    volumes:
+      # You need at least this one volume mapped so Unapckerr can find your files to extract.
+      # Make sure this matches your Starr apps; the folder mount (/downloads or /data) should be identical.
+      - ./data/unpackerr:/config
+      - ./data/nas:/data
+    restart: always
+ 
+ 
+  notifiarr:
+    <<: *env
+    container_name: notifiarr
+    image: golift/notifiarr
+    hostname: notifiarr
+    ports:
+      - "5454:5454"
+    user: 1000:1000
+    volumes:
+      - ./data/notifiarr:/config
+      - /var/run/utmp:/var/run/utmp
+      - /etc/machine-id:/etc/machine-id
+ 
+#Downloader
+  # geoip-
+    # container_name: geoipupdater:
+  #   image: crazymax/geoip-updater:latest
+  #   volumes:
+  #     - "./data/nas/SSD_250GB/Backup_docker/crazymax-rutorrent/geoip:/data"
+  #   env_file:
+  #     - "./data/nas/SSD_250GB/Backup_docker/crazymax-rutorrent/geoip-updater.env"
+ 
+  rtorrent-rutorrent:
+    # <<: *env
+    container_name: rtorrent-rutorrent
+    image: crazymax/rtorrent-rutorrent:latest
+    network_mode: host
+    #networks:
+      #- home_docker
+    stop_grace_period: 30s
+    #expose:
+      #- "6881/udp"
+      #- "8080"
+      #- "9000"
+      #- "50000"
+      #- "8000"
+    #ports:
+      #- target: 6881
+        #published: 6881
+        #protocol: udp
+      #- target: 8090
+        #published: 8090
+        #protocol: tcp
+      #- target: 9000
+        #published: 9000
+        #protocol: tcp
+      #- target: 50000
+        #published: 50000
+        #protocol: tcp
+      #- target: 8000
+        #published: 8000
+        #protocol: tcp
+    # env_file:
+    #   - "./data/nas/SSD_250GB/Backup_docker/crazymax-rutorrent/rtorrent-rutorrent.env"
+    #   - "./data/nas/SSD_250GB/Backup_docker/crazymax-rutorrent/rutorrent.env"
+    volumes:
+      - "./data/nas/SSD_250GB/Backup_docker/crazymax-rutorrent:/data"
+      - "./data/nas/1_4TB/Torrents:/downloads_4T_1"
+      - "./data/nas/2_8TB/Torrents:/downloads_8T_2"
+      - "./data/nas/3_8TB/Torrents:/downloads_8T_3"
+      - "./data/nas/4_12TB/Torrents:/downloads_12T_4"
+      - "./data/nas/SSD_250GB/Backup_docker/crazymax-rutorrent/passwd:/passwd"
+      - "./data/nas/SSD_250GB/Backup_docker/crazymax-rutorrent/rtorrent/scgi:/var/run/rtorrent"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 32000
+        hard: 40000
+ 
+  rtorrent-logs:
+    # <<: *env
+    container_name: rtorrent-logs
+    image: bash
+    command: bash -c 'tail -f /log/*.log'
+    depends_on:
+      - rtorrent-rutorrent
+    volumes:
+      - "./data/nas/SSD_250GB/Backup_docker/crazymax-rutorrent/rtorrent/log:/log"
+ 
+  autodl-irssi:
+    # <<: *env
+    container_name: autodl-irssi
+    image: chacuavip10/autodl-irssi:lastest
+    stdin_open: true
+    tty: true
+    network_mode: host
+    volumes:
+      - ./data/nas/SSD_250GB/Backup_docker/crazymax-rutorrent/rtorrent/watch:/home/user/watch
+      - ./data/nas/SSD_250GB/Backup_docker/crazymax-rutorrent/autodl-irssi/.autodl:/home/user/.autodl
+      - ./data/nas/SSD_250GB/Backup_docker/crazymax-rutorrent/rtorrent/scgi:/rtorrent/scgi
+ 
+  plex:
+    <<: *env
+    container_name: plex
     image: lscr.io/linuxserver/plex
+    #network_mode: host
     ports:
       - 32400:32400
     volumes:
       - ./data/plex/config:/config
+      - ./data/plex/transcode:/transcode
+      - ./data/nas:/data
+    # devices:
+    #   - ./data/dev/dri:/dev/dri
 
-  notifiarr:
-    container_name: notifiarr
-    hostname: notifiarr
-    <<: *env
-    image: golift/notifiarr
-    ports:
-      - "5454:5454"
-    volumes:
-      - ./data/notifiarr:/config
-      - /var/run/utmp:/var/run/utmp
-      # - /etc/machine-id:/etc/machine-id
+  # tautulli:
+    # container_name: tautulli
+  #   image: ghcr.io/tautulli/tautulli
+  #   volumes:
+  #     - ./data/nas/SSD_250GB/Backup_docker/plex_support/tautulli:/config
+  #   ports:
+  #     - 8181:8181
+ 
+
+  # gaps:
+    # container_name: gaps
+  #   image: housewrecker/gaps:latest
+  #   ports:
+  #     - 8484:8484
+  #   expose:
+  #     - "32400"
+  #   volumes:
+  #     - /etc/localtime:/etc/localtime:ro
+  #     - ./data/nas/SSD_250GB/Backup_docker/plex_support/gaps:/usr/data:Z
