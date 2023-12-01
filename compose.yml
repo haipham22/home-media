@@ -1,0 +1,95 @@
+version: "3"
+
+services:
+  radarr:
+    image: lscr.io/linuxserver/radarr
+    container_name: radarr
+    volumes:
+      - ./data/radarr:/config
+      - ./data/nas:/data
+    ports:
+      - 7878:7878
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr
+    container_name: sonarr
+    volumes:
+      - ./data/sonarr:/config
+      - ./data/nas:/data
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+
+  bazarr:
+    image: cr.hotio.dev/hotio/bazarr
+    container_name: bazarr
+    volumes:
+      - ./data/bazarr:/config
+      - ./data/nas:/data
+    ports:
+      - 6767:6767
+    restart: unless-stopped
+
+  overseerr:
+    image: sctx/overseerr:latest
+    container_name: overseerr
+    environment:
+      - LOG_LEVEL=debug
+    ports:
+      - 5055:5055
+    volumes:
+      - ./data/overseerr:/app/config
+    restart: unless-stopped
+
+  prowlarr:
+    container_name: prowlarr
+    image: cr.hotio.dev/hotio/prowlarr:nightly
+    restart: unless-stopped
+    ports:
+      - 9696:9696
+    volumes:
+      - ./data/prowlarr:/config
+
+  # autoscan:
+  #   container_name: autoscan
+  #   image: cloudb0x/autoscan
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3030:3030"
+  #   volumes:
+  #     - ./data/autoscan:/config
+  #     - ./data/nas:/data
+  autoscan:
+    container_name: autoscan
+    image: hotio/autoscan
+    depends_on:
+      - plex
+      - bazarr
+      - sonarr
+      - radarr
+    ports:
+      - "3030:3030"
+    volumes:
+      - ./data/autoscan:/config
+  # emby:
+  #   image: dperson/emby
+  #   restart: always
+  #   ports:
+  #     - "8096:8096"
+  #   expose:
+  #     - "7359/udp"
+  #     - "1900/udp"
+  #   volumes:
+  #     - ${USERDIR}/config/emby:/config
+  #     - ${USERDIR}/media/movies:/media/movies
+  #     - ${USERDIR}/media/tv:/media/tv
+  plex:
+    container_name: plex
+    image: lscr.io/linuxserver/plex
+    restart: unless-stopped
+    ports:
+      - 32400:32400
+    volumes:
+      - ./data/plex/config:/config
+      - ./data/nas:/data
